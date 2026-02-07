@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  plan      String   @default("free") // "free" or "pro"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assistants Assistant[]
+}
+
+model Assistant {
+  id                  String   @id @default(cuid())
+  ownerId             String
+  owner               User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  name                String
+  model               String   @default("gpt-4o-mini")
+  systemPrompt        String
+
+  telegramBotTokenEnc String?
+  telegramSecretToken String? // base64url safe; verified from Telegram header
+
+  openAiKeyEnc        String? // BYOK for free plan
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  usages              Usage[]
+}
+
+model Usage {
+  id          String   @id @default(cuid())
+  assistantId String
+  assistant   Assistant @relation(fields: [assistantId], references: [id], onDelete: Cascade)
+
+  period      String   // "YYYY-MM"
+  messagesUsed Int     @default(0)
+  lastMessageAt DateTime?
+
+  @@unique([assistantId, period])
+}
